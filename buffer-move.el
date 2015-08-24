@@ -91,31 +91,35 @@
   :group 'buffer-move
   :type 'symbol)
 
-
+;; changes: allow switch/move dedicated windows. it's usefull for me.
 (defun buf-move-to (direction)
   "Helper function to move the current buffer to the window in the given
    direction (with must be 'up, 'down', 'left or 'right). An error is
    thrown, if no window exists in this direction."
   (let* ((other-win (windmove-find-other-window direction))
-         (buf-this-buf (window-buffer (selected-window))))
-    (if (null other-win)
-        (error "No window in this direction")
-      (if (window-dedicated-p other-win)
-	  (error "The window in this direction is dedicated"))
-      (if (string-match "^ \\*Minibuf" (buffer-name (window-buffer other-win)))
-	  (error "The window in this direction is the Minibuf"))
-      (if (eq buffer-move-behavior 'move)
-          ;; switch selected window to previous buffer (moving)
-          (switch-to-prev-buffer (selected-window))
+		 (buf-this-buf (window-buffer (selected-window)))
+		 (dedi-selected-win (window-dedicated-p (selected-window)))
+		 (dedi-other-win (window-dedicated-p other-win))
+		 )
+	(if (null other-win)
+		(error "No window in this direction")
+	  (set-window-dedicated-p other-win nil)
+	  (set-window-dedicated-p (selected-window) nil)
+	  (if (eq buffer-move-behavior 'move)
+		  ;; switch selected window to previous buffer (moving)
+		  (switch-to-prev-buffer (selected-window))
+		;; switch selected window to buffer of other window (swapping)
+		(set-window-buffer (selected-window) (window-buffer other-win))
+		)
+	  ;; switch other window to this buffer
+	  (set-window-buffer other-win buf-this-buf)
+	  (select-window other-win)
 
-        ;; switch selected window to buffer of other window (swapping)
-        (set-window-buffer (selected-window) (window-buffer other-win))
-        )
-
-      ;; switch other window to this buffer
-      (set-window-buffer other-win buf-this-buf)
-
-      (select-window other-win))))
+	  (set-window-dedicated-p other-win dedi-other-win)
+	  (set-window-dedicated-p (selected-window) dedi-selected-win)
+	  )
+	)
+  )
 
 ;;;###autoload
 (defun buf-move-up ()
